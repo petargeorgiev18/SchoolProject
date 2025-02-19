@@ -1,6 +1,5 @@
-﻿using Loggers_SchoolProject;
+using Loggers_SchoolProject;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Abstractions;
 using System.Text;
 
 namespace ADO.NET_SchoolProject
@@ -9,14 +8,20 @@ namespace ADO.NET_SchoolProject
     {
         static void Main(string[] args)
         {
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;
-            Initial Catalog=master;Integrated Security=True;Encrypt=False;Trust Server Certificate=True";
-            Console.Write("Enter database name: ");
+            string connectionString = @"Data Source=DESKTOP-VT7JP1I\SQLEXPRESS;
+            Initial Catalog=master;Integrated Security=True;Encrypt=False";
+            Console.WriteLine("Enter the database name: ");
+            ILog logger = new Logger();
             string databaseName = Console.ReadLine();
-            if (DatabaseExists(connectionString, "SchoolDB"))
+            if (DatabaseExists(connectionString, databaseName))
             {
-                SqlConnection connection = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;
-                Initial Catalog=SchoolDB;Integrated Security=True;Encrypt=False;Trust Server Certificate=True");
+                string sqlConnection = @$"Data Source=DESKTOP-VT7JP1I\SQLEXPRESS;
+                       Initial Catalog={databaseName};Integrated Security=True;Encrypt=False";
+                Console.WriteLine("Enter the table which we are going to insert to:");
+                string tableName = Console.ReadLine();
+                InsertDatabaseInfo(sqlConnection, tableName, logger);
+                SqlConnection connection = new SqlConnection(@$"Data Source=DESKTOP-VT7JP1I\SQLEXPRESS;
+                       Initial Catalog={databaseName};Integrated Security=True;Encrypt=False");
                 connection.Open();
                 using (connection)
                 {
@@ -50,13 +55,16 @@ namespace ADO.NET_SchoolProject
             {
                 Console.WriteLine("There's no such database.");
                 Console.WriteLine("Proccess of creating database...");
-                CreateDatabase(connectionString,  "SchoolDB");
+                CreateDatabase(connectionString, databaseName);
                 Console.WriteLine("Proccess of creating tables...");
-                CreateTables(connectionString);
+                string sqlConnection = @$"Data Source=DESKTOP-VT7JP1I\SQLEXPRESS;
+                       Initial Catalog={databaseName};Integrated Security=True;Encrypt=False";
+                CreateTables(sqlConnection);
                 Console.WriteLine("Enter the table which we are going to insert to:");
                 string tableName = Console.ReadLine();
-                SqlConnection connection = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;
-                Initial Catalog=SchoolDB;Integrated Security=True;Encrypt=False;Trust Server Certificate=True");
+                InsertDatabaseInfo(sqlConnection, tableName, logger);
+                SqlConnection connection = new SqlConnection(@$"Data Source=DESKTOP-VT7JP1I\SQLEXPRESS;
+                Initial Catalog={databaseName};Integrated Security=True;Encrypt=False");
                 connection.Open();
                 using (connection)
                 {
@@ -326,14 +334,14 @@ namespace ADO.NET_SchoolProject
             var parts = data.Split(',');
             string query = "INSERT INTO classes (class_number, class_letter, class_teacher_id, classroom_id) VALUES (@class_number, @class_letter, @class_teacher_id, @classroom_id)";
             SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@class_number", int.Parse(parts[0].Trim()));
-            command.Parameters.AddWithValue("@class_letter", parts[1].Trim());
-            command.Parameters.AddWithValue("@class_teacher_id", int.Parse(parts[2].Trim()));
-            command.Parameters.AddWithValue("@classroom_id", int.Parse(parts[3].Trim()));
+            command.Parameters.AddWithValue("@class_number", int.Parse(parts[0]));
+            command.Parameters.AddWithValue("@class_letter", parts[1]);
+            command.Parameters.AddWithValue("@class_teacher_id", int.Parse(parts[2]));
+            command.Parameters.AddWithValue("@classroom_id", int.Parse(parts[3]));
             command.ExecuteNonQuery();
             Console.WriteLine("Inserted into classes.");
-            string insertedValues = $"ClassNumber: {parts[0].Trim()}" +
-                $", ClassLetter: {parts[1].Trim()}, ClassTeacherId: {parts[2].Trim()}, ClassroomId: {parts[3].Trim()}";
+            string insertedValues = $"ClassNumber: {parts[0]}" +
+                $", ClassLetter: {parts[1]}, ClassTeacherId: {parts[2]}, ClassroomId: {parts[3].Trim()}";
             logger.LogInsertedValues("classes", insertedValues);
         }
         private static void InsertIntoStudents(SqlConnection connection, string data, ILog logger)
@@ -395,7 +403,9 @@ namespace ADO.NET_SchoolProject
         public static string Query1(SqlConnection connection)
         {
             StringBuilder sb = new StringBuilder();
-            SqlCommand command = new SqlCommand("SELECT s.full_name FROM students as s JOIN classes as c WHERE c.class_number = '11' AND c.class_letter = 'B'", connection);
+            SqlCommand command = new SqlCommand("SELECT s.full_name FROM students as s" +
+                "\r\nJOIN classes as c ON s.class_id = c.id\r\n" +
+                "WHERE c.class_number = '11' AND c.class_letter = 'B'", connection);
             SqlDataReader reader = command.ExecuteReader();
             using (reader)
             {
